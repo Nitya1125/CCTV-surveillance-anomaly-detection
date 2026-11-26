@@ -28,7 +28,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts";
-import { getDashboardStats, getEventStats } from "../services/api";
+import { getDashboardStats, getEventStats, resolveMediaUrl } from "../services/api";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -239,7 +239,7 @@ const Dashboard = () => {
             <div className="lg:col-span-2 relative aspect-video bg-black rounded-xl overflow-hidden border border-[#E5E9F0] shadow-sm flex items-center justify-center">
               {latestVideo.annotated_video_url ? (
                 <video
-                  src={`http://localhost:5000${latestVideo.annotated_video_url}`}
+                  src={resolveMediaUrl(latestVideo.annotated_video_url)}
                   controls
                   playsInline
                   className="w-full h-full object-contain"

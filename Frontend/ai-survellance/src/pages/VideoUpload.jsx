@@ -18,7 +18,7 @@ import {
   FiMaximize2,
   FiRefreshCw
 } from "react-icons/fi";
-import { uploadVideo } from "../services/api";
+import { uploadVideo, resolveMediaUrl } from "../services/api";
 
 const VideoUpload = () => {
   const [feedLabel, setFeedLabel] = useState("Surveillance Sector Alpha");
@@ -540,7 +540,7 @@ const VideoUpload = () => {
               <div className="aspect-video bg-black rounded-xl overflow-hidden border border-[#E5E9F0] shadow-sm flex items-center justify-center">
                 {processedResult.annotated_video_url ? (
                   <video
-                    src={`http://localhost:5000${processedResult.annotated_video_url}`}
+                    src={resolveMediaUrl(processedResult.annotated_video_url)}
                     controls
                     playsInline
                     className="w-full h-full object-contain"

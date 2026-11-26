@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaClock } from "react-icons/fa";
-
-const API_BASE = "http://localhost:3000/api";
+import { checkStatus as checkStatusApi } from "../services/api";
 
 const WaitingApproval = () => {
     const navigate = useNavigate();
@@ -11,11 +10,8 @@ const WaitingApproval = () => {
     const checkStatus = async () => {
         setChecking(true);
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE}/auth/check-status`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
+            const res = await checkStatusApi();
+            const data = res.data;
 
             if (data.user.status === "active" && data.user.role === "admin") {
                 // Approved! Update localStorage and go to org-created page

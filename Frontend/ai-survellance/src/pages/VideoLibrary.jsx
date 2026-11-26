@@ -12,7 +12,7 @@ import {
   FiRefreshCw,
   FiLayers
 } from "react-icons/fi";
-import { getVideos, deleteVideo } from "../services/api";
+import { getVideos, deleteVideo, resolveMediaUrl } from "../services/api";
 
 const VideoLibrary = () => {
   const [videos, setVideos] = useState([]);
@@ -203,7 +203,7 @@ const VideoLibrary = () => {
 
             <div className="aspect-video bg-black flex items-center justify-center">
               <video
-                src={activeVideo.annotated_video_url ? (activeVideo.annotated_video_url.startsWith("http") ? activeVideo.annotated_video_url : `http://localhost:5000${activeVideo.annotated_video_url}`) : ""}
+                src={resolveMediaUrl(activeVideo.annotated_video_url)}
                 controls
                 autoPlay
                 className="w-full h-full object-contain"

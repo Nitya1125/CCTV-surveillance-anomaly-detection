@@ -1,7 +1,32 @@
 import axios from "axios";
 
+// Standardize backend base URL resolution:
+// If VITE_API_URL is configured (e.g. "https://cctv-surveillance.onrender.com" on Netlify),
+// normalize it by stripping any trailing slash and ensuring /api is appended once.
+// If VITE_API_URL is not provided (local dev default), fallback to "http://localhost:3000/api".
+const rawBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const cleanBaseUrl = rawBaseUrl.replace(/\/+$/, "");
+export const BASE_API_URL = cleanBaseUrl.endsWith("/api")
+    ? cleanBaseUrl
+    : `${cleanBaseUrl}/api`;
+
+// Export origin root (useful for static video /uploads/ paths)
+export const BACKEND_ORIGIN = cleanBaseUrl.endsWith("/api")
+    ? cleanBaseUrl.slice(0, -4)
+    : cleanBaseUrl;
+
+// Helper to resolve backend media assets (e.g. annotated video URLs)
+export const resolveMediaUrl = (relativeUrl) => {
+    if (!relativeUrl) return "";
+    if (relativeUrl.startsWith("http://") || relativeUrl.startsWith("https://")) {
+        return relativeUrl;
+    }
+    const cleanPath = relativeUrl.startsWith("/") ? relativeUrl : `/${relativeUrl}`;
+    return `${BACKEND_ORIGIN}${cleanPath}`;
+};
+
 const API = axios.create({
-    baseURL: "/api",
+    baseURL: BASE_API_URL,
     withCredentials: true,
 });
 
@@ -19,10 +44,9 @@ API.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            // If on a protected route, clear stored auth if token is invalid
             const path = window.location.pathname;
             if (path !== "/" && path !== "/signup" && path !== "/forgot-password") {
-                // optionally keep track or redirect
+                // Token invalid or expired
             }
         }
         return Promise.reject(error);

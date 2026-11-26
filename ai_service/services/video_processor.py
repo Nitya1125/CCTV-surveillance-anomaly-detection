@@ -8,8 +8,10 @@ from ai.detector import detect_people
 from ai.tracker import track_objects
 from ai.event_engine import detect_events
 
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "outputs"
+# Determine directory paths relative to this service's root
+SERVICE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_FOLDER = os.path.join(SERVICE_ROOT, "uploads")
+OUTPUT_FOLDER = os.path.join(SERVICE_ROOT, "outputs")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
@@ -19,7 +21,9 @@ async def process_video(video, zone_coords):
 
     zone_polygon = np.array(zone_coords, np.int32)
 
-    video_path = os.path.join(UPLOAD_FOLDER, video.filename)
+    # Use unique timestamped upload name to prevent race conditions
+    safe_filename = f"upload_{int(time.time())}_{video.filename.replace(' ', '_')}"
+    video_path = os.path.join(UPLOAD_FOLDER, safe_filename)
 
     with open(video_path, "wb") as buffer:
         shutil.copyfileobj(video.file, buffer)
@@ -34,7 +38,7 @@ async def process_video(video, zone_coords):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    output_filename = f"annotated_{int(time.time())}_{video.filename}"
+    output_filename = f"annotated_{int(time.time())}_{video.filename.replace(' ', '_')}"
     output_path = os.path.join(OUTPUT_FOLDER, output_filename)
 
     # Ensure we never pass 0 as fps to VideoWriter
@@ -127,10 +131,23 @@ async def process_video(video, zone_coords):
         cap.release()
         out.release()
 
+        # Safely remove the raw uploaded temporary file
         if os.path.exists(video_path):
-            os.remove(video_path)
+            try:
+                os.remove(video_path)
+            except Exception as e:
+                print(f"Warning: could not delete temporary upload {video_path}: {e}")
 
-    video_url = f"http://127.0.0.1:8000/videos/{output_filename}"
+    # Generate externally accessible video URL:
+    # 1. If AI_SERVICE_PUBLIC_URL is configured (e.g. https://cctv-ai.onrender.com), use it.
+    # 2. Otherwise default to local: http://127.0.0.1:{PORT}/videos/{output_filename}
+    public_base_url = os.environ.get("AI_SERVICE_PUBLIC_URL")
+    if public_base_url:
+        public_base_url = public_base_url.rstrip("/")
+        video_url = f"{public_base_url}/videos/{output_filename}"
+    else:
+        port = os.environ.get("PORT", "8000")
+        video_url = f"http://127.0.0.1:{port}/videos/{output_filename}"
 
     return {
         "status": "done",

@@ -1,4 +1,4 @@
-# VigilAI Enterprise — AI-Powered CCTV Surveillance & Anomaly Detection Platform
+# AI-Powered CCTV Surveillance & Anomaly Detection Platform
 
 [![Platform](https://img.shields.io/badge/Platform-Enterprise_CCTV_SaaS-2563EB.svg)](#)
 [![Computer Vision](https://img.shields.io/badge/Computer_Vision-YOLOv8_%2B_DeepSORT-16A36A.svg)](#)

@@ -7,11 +7,23 @@ const userSchema = new mongoose.Schema({
         trim: true
     },
 
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+
     email: {
         type: String,
         required: true,
         unique: true,
         lowercase: true,
+        trim: true
+    },
+
+    phone: {
+        type: String,
         trim: true
     },
 
@@ -22,10 +34,20 @@ const userSchema = new mongoose.Schema({
 
     role: {
         type: String,
-        enum: ["super_admin", "admin", "operator", "new_user"],
+        enum: ["owner", "admin", "operator", "viewer", "super_admin"],
         required: true,
-        default: "new_user"
+        default: "operator"
+    },
 
+    organization_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Organization"
+    },
+
+    status: {
+        type: String,
+        enum: ["active", "pending", "suspended"],
+        default: "active"
     }
 
 }, {

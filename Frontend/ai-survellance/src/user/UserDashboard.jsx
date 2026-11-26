@@ -1,18 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaBars,
   FaUser,
   FaUpload,
 } from "react-icons/fa";
+import { getDashboardStats } from "../services/api";
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const totalVideos = 12;
-  const suspicious = 4;
-  const Organization = "GCET";
+  const [stats, setStats] = useState({
+    totalVideos: 0,
+    suspiciousActivities: 0
+  });
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await getDashboardStats();
+      setStats(res.data);
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/");
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -34,7 +57,7 @@ const UserDashboard = () => {
       </div>
 
       {open && (
-        <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg p-6">
+        <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg p-6 z-50">
           <h2 className="text-xl font-bold mb-8">User Panel</h2>
 
           <div className="space-y-6">
@@ -45,7 +68,7 @@ const UserDashboard = () => {
               }}
               className="flex items-center gap-3"
             >
-              Operator
+              Dashboard
             </button>
 
             <button
@@ -71,7 +94,7 @@ const UserDashboard = () => {
             </button>
 
             <button
-              onClick={() => navigate("/")}
+              onClick={handleLogout}
               className="flex items-center gap-3 text-red-500"
             >
               Logout
@@ -85,19 +108,19 @@ const UserDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow">
             <p className="text-gray-500 text-sm">Total Videos</p>
 
-            <p className="text-3xl font-bold">{totalVideos}</p>
+            <p className="text-3xl font-bold">{stats.totalVideos}</p>
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow">
             <p className="text-gray-500 text-sm">Suspicious Activity</p>
 
-            <p className="text-3xl font-bold text-red-500">{suspicious}</p>
+            <p className="text-3xl font-bold text-red-500">{stats.suspiciousActivities}</p>
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow">
             <p className="text-gray-500 text-sm">Organization</p>
 
-            <p className="text-lg font-semibold">{Organization}</p>
+            <p className="text-lg font-semibold">{user.organization_id ? "Joined" : "None"}</p>
           </div>
         </div>
 

@@ -7,13 +7,48 @@ const organizationSchema = new mongoose.Schema({
         trim: true
     },
 
-    created_by: {
+    org_type: {
+        type: String,
+        enum: ["Company", "College", "Office", "Startup", "Enterprise", "Other"],
+        default: "Company"
+    },
+
+    join_code: {
+        type: String,
+        required: true,
+        unique: true
+    },
+
+    owner_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    users: {
-        type: Array,
-        default: []
+
+    admin_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+
+    status: {
+        type: String,
+        enum: ["active", "pending", "suspended"],
+        default: "active"
+    },
+
+    settings: {
+        retention_days: {
+            type: Number,
+            default: 30
+        },
+        auto_alerts: {
+            type: Boolean,
+            default: true
+        },
+        sensitivity: {
+            type: String,
+            enum: ["low", "standard", "high"],
+            default: "standard"
+        }
     }
 
 }, {

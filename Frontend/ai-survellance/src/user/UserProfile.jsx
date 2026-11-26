@@ -1,15 +1,30 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaUserCircle } from "react-icons/fa";
+import { getUserProfile } from "../services/api";
 
 const UserProfile = () => {
   const navigate = useNavigate();
 
-  const user = {
-    name: "Nitya Gandhi",
-    email: "nitya@gmail.com",
-    organization: "GCET",
-    videos: 12,
-    suspicious: 5,
+  const [user, setUser] = useState({
+    name: "",
+    email: "",
+    organization: "",
+    videos: 0,
+    suspicious: 0,
+  });
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await getUserProfile();
+      setUser(res.data);
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+    }
   };
 
   return (

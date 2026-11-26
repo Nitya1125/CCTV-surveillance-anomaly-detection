@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaBars,
@@ -8,15 +8,37 @@ import {
   FaVideo,
   FaSignOutAlt,
 } from "react-icons/fa";
+import { getSuperAdminStats } from "../services/api";
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const totalOrganizations = 8;
-  const pendingAdmins = 3;
-  const totalUsers = 42;
-  const totalVideos = 96;
+  const [stats, setStats] = useState({
+    totalOrganizations: 0,
+    pendingAdmins: 0,
+    totalUsers: 0,
+    totalVideos: 0
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await getSuperAdminStats();
+      setStats(res.data);
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/");
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -28,7 +50,7 @@ const SuperAdminDashboard = () => {
         <h1 className="font-semibold text-lg">Super Admin Dashboard</h1>
 
         <button
-          onClick={() => navigate("/")}
+          onClick={handleLogout}
           className="flex items-center gap-2 text-red-500"
         >
           <FaSignOutAlt />
@@ -37,7 +59,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {open && (
-        <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg p-6">
+        <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg p-6 z-50">
           <h2 className="text-xl font-bold mb-8">Super Admin</h2>
 
           <div className="space-y-6">
@@ -81,7 +103,7 @@ const SuperAdminDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Organizations</p>
-              <p className="text-3xl font-bold">{totalOrganizations}</p>
+              <p className="text-3xl font-bold">{stats.totalOrganizations}</p>
             </div>
             <FaBuilding className="text-3xl text-gray-600" />
           </div>
@@ -89,7 +111,7 @@ const SuperAdminDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Pending Admins</p>
-              <p className="text-3xl font-bold">{pendingAdmins}</p>
+              <p className="text-3xl font-bold">{stats.pendingAdmins}</p>
             </div>
             <FaUserShield className="text-3xl text-gray-600" />
           </div>
@@ -97,7 +119,7 @@ const SuperAdminDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Total Users</p>
-              <p className="text-3xl font-bold">{totalUsers}</p>
+              <p className="text-3xl font-bold">{stats.totalUsers}</p>
             </div>
             <FaUsers className="text-3xl text-gray-600" />
           </div>
@@ -105,7 +127,7 @@ const SuperAdminDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Videos Uploaded</p>
-              <p className="text-3xl font-bold">{totalVideos}</p>
+              <p className="text-3xl font-bold">{stats.totalVideos}</p>
             </div>
             <FaVideo className="text-3xl text-gray-600" />
           </div>

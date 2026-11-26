@@ -26,86 +26,114 @@ async def process_video(video, zone_coords):
 
     cap = cv2.VideoCapture(video_path)
 
-    fps = cap.get(cv2.CAP_PROP_FPS)
+    # Fallbacks for cameras / files that don't expose FPS correctly
+    fps = cap.get(cv2.CAP_PROP_FPS) or 0.0
+    if fps <= 0:
+        fps = 25.0
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-
     output_filename = f"annotated_{int(time.time())}_{video.filename}"
-
     output_path = os.path.join(OUTPUT_FOLDER, output_filename)
 
-    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    # Ensure we never pass 0 as fps to VideoWriter
+    out_fps = max(fps / 3.0, 1.0)
+
+    # Attempt H.264 (avc1) first for seamless HTML5 video player playback in web browsers
+    fourcc = cv2.VideoWriter_fourcc(*"avc1")
+    out = cv2.VideoWriter(output_path, fourcc, out_fps, (width, height))
+    if not out.isOpened():
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(output_path, fourcc, out_fps, (width, height))
 
     frame_count = 0
     events = []
 
-    while True:
+    try:
+        while True:
+            ret, frame = cap.read()
 
-        ret, frame = cap.read()
+            if not ret:
+                break
 
-        if not ret:
-            break
+            frame_count += 1
 
-        frame_count += 1
+            # Draw zone once per frame
+            cv2.polylines(frame, [zone_polygon], True, (0, 0, 255), 2)
 
-        if frame_count % 3 != 0:
-            continue
+            detections = detect_people(frame)
 
-        detections = detect_people(frame)
+            tracks = track_objects(detections, frame)
 
-        tracks = track_objects(detections, frame)
+            for track in tracks:
+                if not hasattr(track, "is_confirmed") or not track.is_confirmed():
+                    continue
 
-        for track in tracks:
+                track_id = getattr(track, "track_id", 0)
 
-            if not track.is_confirmed():
-                continue
+                l, t, r, b = map(int, track.to_ltrb())
 
-            track_id = track.track_id
+                center_x = int((l + r) / 2)
+                center_y = int((t + b) / 2)
 
-            l, t, w, h = map(int, track.to_ltrb())
+                center = (center_x, center_y)
 
-            center_x = int(l + w / 2)
-            center_y = int(t + h / 2)
+                timestamp = frame_count / fps
 
-            center = (center_x, center_y)
+                detected_events = detect_events(
+                    track_id,
+                    center,
+                    zone_polygon,
+                    timestamp
+                )
 
-            cv2.rectangle(frame, (l, t), (l+w, t+h), (0,255,0), 2)
+                events.extend(detected_events)
 
-            cv2.putText(
-                frame,
-                f"ID {track_id}",
-                (l, t-10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0,255,0),
-                2
-            )
+                # Default color and label
+                color = (0, 255, 0)
+                label = f"ID {track_id}"
 
-            cv2.polylines(frame, [zone_polygon], True, (0,0,255), 2)
+                # Change color based on detected event
+                for event in detected_events:
+                    if event["event_type"] == "restricted_area_entry":
+                        color = (0, 0, 255)
+                        label = "RESTRICTED AREA"
 
-            timestamp = frame_count / fps
+                    elif event["event_type"] == "sudden_running":
+                        color = (0, 165, 255)
+                        label = "RUNNING"
 
-            detected_events = detect_events(
-                track_id,
-                center,
-                zone_polygon,
-                timestamp
-            )
+                    elif event["event_type"] == "loitering":
+                        color = (255, 0, 0)
+                        label = "LOITERING"
 
-            events.extend(detected_events)
+                # Draw bounding box
+                cv2.rectangle(frame, (l, t), (r, b), color, 2)
 
-        out.write(frame)
+                # Draw label
+                cv2.putText(
+                    frame,
+                    label,
+                    (l, t - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    color,
+                    2
+                )
 
-    cap.release()
-    out.release()
+            out.write(frame)
+    finally:
+        cap.release()
+        out.release()
 
-    os.remove(video_path)
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+    video_url = f"http://127.0.0.1:8000/videos/{output_filename}"
 
     return {
         "status": "done",
         "events": events,
-        "annotated_video": output_filename
+        "annotated_video_url": video_url
     }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaTrash,
@@ -8,49 +8,43 @@ import {
   FaUserClock,
   FaArrowLeft,
 } from "react-icons/fa";
+import { getOrgUsers, removeUser } from "../services/api";
 
 const ManageUsers = () => {
   const navigate = useNavigate();
 
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "Khush",
-      email: "khush@gmail.com",
-      role: "Admin",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Sidhdrajsing",
-      email: "Sidhdraj@gmail.com",
-      role: "User",
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "pratham",
-      email: "pratham@gmail.com",
-      role: "User",
-      status: "Pending",
-    },
-    {
-      id: 4,
-      name: "Nitya",
-      email: "nitya@gmail.com",
-      role: "User",
-      status: "Active",
-    },
-  ]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const removeUser = (id) => {
-    setUsers(users.filter((user) => user.id !== id));
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await getOrgUsers();
+      setUsers(res.data.users);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveUser = async (id) => {
+    if (!confirm("Remove this user from the organization?")) return;
+    try {
+      await removeUser(id);
+      setUsers(users.filter((user) => user._id !== id));
+    } catch (err) {
+      alert("Failed to remove user");
+    }
   };
 
   const totalUsers = users.length;
-  const admins = users.filter((u) => u.role === "Admin").length;
-  const activeUsers = users.filter((u) => u.status === "Active").length;
-  const pendingUsers = users.filter((u) => u.status === "Pending").length;
+  const admins = users.filter((u) => u.role === "admin").length;
+  const activeUsers = users.filter((u) => u.status === "active").length;
+  const pendingUsers = users.filter((u) => u.status === "pending").length;
 
   return (
     <div className="p-10 bg-gray-50 min-h-screen">
@@ -99,44 +93,55 @@ const ManageUsers = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-4 text-left text-sm">Name</th>
-              <th className="p-4 text-left text-sm">Email</th>
-              <th className="p-4 text-left text-sm">Role</th>
-              <th className="p-4 text-left text-sm">Status</th>
-              <th className="p-4 text-left text-sm">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-t">
-                <td className="p-4">{user.name}</td>
-                <td className="p-4">{user.email}</td>
-                <td className="p-4">{user.role}</td>
-
-                <td className="p-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm ${user.status === "Active" ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600"}`}
-                  >
-                    {user.status}
-                  </span>
-                </td>
-
-                <td className="p-4">
-                  <button
-                    onClick={() => removeUser(user.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <FaTrash />
-                  </button>
-                </td>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading users...</div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-4 text-left text-sm">Name</th>
+                <th className="p-4 text-left text-sm">Email</th>
+                <th className="p-4 text-left text-sm">Role</th>
+                <th className="p-4 text-left text-sm">Status</th>
+                <th className="p-4 text-left text-sm">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {users.map((user) => (
+                <tr key={user._id} className="border-t">
+                  <td className="p-4">{user.name}</td>
+                  <td className="p-4">{user.email}</td>
+                  <td className="p-4 capitalize">{user.role}</td>
+
+                  <td className="p-4">
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm ${user.status === "active" ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600"}`}
+                    >
+                      {user.status}
+                    </span>
+                  </td>
+
+                  <td className="p-4">
+                    <button
+                      onClick={() => handleRemoveUser(user._id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-gray-400">
+                    No users in this organization yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

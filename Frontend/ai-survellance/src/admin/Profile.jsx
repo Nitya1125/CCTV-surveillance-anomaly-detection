@@ -1,41 +1,72 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCopy } from "react-icons/fa";
+import { getOrgProfile, changePassword } from "../services/api";
 
 const AdminProfile = () => {
   const navigate = useNavigate();
-  const orgName = "GCET";
-  const joinCode = "483921";
-  const totalVideos = 24;
-  const suspicious = 7;
-  const totalUsers = 5;
+
+  const [orgData, setOrgData] = useState({
+    orgName: "",
+    joinCode: "",
+    totalUsers: 0,
+    totalVideos: 0,
+    suspicious: 0
+  });
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [verified, setVerified] = useState(false);
-  const correctPassword = "admin123";
-  const checkPassword = () => {
-    if (currentPassword === correctPassword) {
-      setVerified(true);
-    } else {
-      alert("Incorrect password");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchOrgProfile();
+  }, []);
+
+  const fetchOrgProfile = async () => {
+    try {
+      const res = await getOrgProfile();
+      setOrgData(res.data);
+    } catch (err) {
+      console.error("Failed to fetch org profile:", err);
     }
   };
-  const updatePassword = () => {
-    if (newPassword !== confirmPassword) {
-      alert("Passwords do not match");
+
+  const checkPassword = () => {
+    if (!currentPassword) {
+      setError("Please enter your current password");
       return;
     }
-    alert("Password updated successfully");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setVerified(false);
+    setVerified(true);
+    setError("");
   };
+
+  const updatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    try {
+      await changePassword({ currentPassword, newPassword });
+      setMessage("Password updated successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setVerified(false);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update password");
+    }
+  };
+
   const copyCode = () => {
-    navigator.clipboard.writeText(joinCode);
+    navigator.clipboard.writeText(orgData.joinCode);
     alert("Join code copied");
   };
+
   return (
     <div className="p-10 bg-gray-50 min-h-screen">
       <div className="flex items-center gap-3 mb-6">
@@ -52,13 +83,13 @@ const AdminProfile = () => {
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
             <p className="text-gray-500 text-sm">Organization</p>
-            <p className="text-lg font-semibold">{orgName}</p>
+            <p className="text-lg font-semibold">{orgData.orgName}</p>
           </div>
 
           <div>
             <p className="text-gray-500 text-sm">Join Code</p>
             <div className="flex items-center gap-3">
-              <p className="text-lg font-semibold">{joinCode}</p>
+              <p className="text-lg font-semibold">{orgData.joinCode}</p>
               <button onClick={copyCode} className="text-gray-600">
                 <FaCopy />
               </button>
@@ -66,20 +97,34 @@ const AdminProfile = () => {
           </div>
           <div>
             <p className="text-gray-500 text-sm">Total Users</p>
-            <p className="text-lg font-semibold">{totalUsers}</p>
+            <p className="text-lg font-semibold">{orgData.totalUsers}</p>
           </div>
           <div>
             <p className="text-gray-500 text-sm">Total Videos</p>
-            <p className="text-lg font-semibold">{totalVideos}</p>
+            <p className="text-lg font-semibold">{orgData.totalVideos}</p>
           </div>
           <div>
             <p className="text-gray-500 text-sm">Suspicious Activities</p>
-            <p className="text-lg font-semibold">{suspicious}</p>
+            <p className="text-lg font-semibold">{orgData.suspicious}</p>
           </div>
         </div>
       </div>
+
       <div className="bg-white rounded-xl shadow p-8">
         <h2 className="text-lg font-semibold mb-4">Change Password</h2>
+
+        {message && (
+          <div className="mb-4 p-3 bg-green-50 text-green-600 rounded-lg text-sm">
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
         {!verified && (
           <div className="space-y-4 max-w-md">
             <input

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FiShield, FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight, FiAlertCircle } from "react-icons/fi";
+import { signup } from "../../services/api";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -12,120 +13,191 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
+    setError("");
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match");
+    if (password.length < 6) {
+      setError("Password must contain at least 6 characters.");
       return;
     }
 
-    alert("Account created successfully");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match. Please re-enter.");
+      return;
+    }
 
-    navigate("/organization");
+    setLoading(true);
+
+    try {
+      const res = await signup({
+        name: name.trim(),
+        email: email.trim(),
+        username: username.trim(),
+        password
+      });
+
+      const { token, user } = res.data;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user_name", user.name);
+      localStorage.setItem("email", user.email);
+      localStorage.setItem("role", user.role);
+
+      navigate("/organization");
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed. Please check your information.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-100">
-
-      <div className="w-full max-w-md p-10 bg-white/80 backdrop-blur-lg shadow-2xl rounded-3xl border border-gray-100">
-
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
-          Create Account
-        </h1>
-
-        <p className="text-center text-gray-500 mb-8">
-          Join AI Surveillance System
-        </p>
-
-        <form onSubmit={handleSignup} className="space-y-5">
-
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-
-            <span
-              className="absolute right-4 top-3.5 cursor-pointer text-gray-500"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </span>
+    <div className="min-h-screen bg-[#F5F7FA] flex flex-col justify-center py-12 sm:px-6 lg:px-8 antialiased">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <div className="w-11 h-11 rounded-xl bg-[#2563EB] flex items-center justify-center text-white shadow-subtle">
+            <FiShield className="text-2xl" />
           </div>
-
-          <div className="relative">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-
-            <span
-              className="absolute right-4 top-3.5 cursor-pointer text-gray-500"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-            </span>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold rounded-xl hover:scale-[1.02] transition"
-          >
-            Create Account
-          </button>
-
-        </form>
-
-        <div className="text-center mt-6 text-sm">
-
-          <span className="text-gray-500">
-            Already have an account?
-          </span>
-
-          <Link
-            to="/"
-            className="ml-2 text-blue-500 hover:underline"
-          >
-            Login
-          </Link>
-
         </div>
-
+        <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-[#252B36]">
+          Create Operator Account
+        </h2>
+        <p className="mt-1 text-center text-sm text-[#697586]">
+          Setup your enterprise credentials to manage surveillance feeds
+        </p>
       </div>
 
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
+        <div className="bg-white py-8 px-6 sm:px-10 border border-[#E5E9F0] rounded-xl shadow-card">
+          {error && (
+            <div className="mb-5 p-3 rounded-lg bg-[#FDF2F2] border border-[#DC4545]/20 flex items-start gap-2.5 text-xs text-[#DC4545]">
+              <FiAlertCircle className="text-sm shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#252B36] mb-1.5">
+                Full Name
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  placeholder="Alex Mercer"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input-field pl-9"
+                />
+                <FiUser className="absolute left-3 top-3 text-[#9AA5B5] text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#252B36] mb-1.5">
+                Work Email Address
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  placeholder="alex@enterprise.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-field pl-9"
+                />
+                <FiMail className="absolute left-3 top-3 text-[#9AA5B5] text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#252B36] mb-1.5">
+                Username
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  placeholder="alex_mercer"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="input-field pl-9"
+                />
+                <FiUser className="absolute left-3 top-3 text-[#9AA5B5] text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#252B36] mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="Min. 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field pl-9 pr-9"
+                />
+                <FiLock className="absolute left-3 top-3 text-[#9AA5B5] text-sm" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-[#9AA5B5] hover:text-[#252B36] text-sm p-0.5"
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#252B36] mb-1.5">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="input-field pl-9"
+                />
+                <FiLock className="absolute left-3 top-3 text-[#9AA5B5] text-sm" />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full btn-primary py-2.5 mt-2"
+            >
+              {loading ? (
+                <span>Registering Account...</span>
+              ) : (
+                <>
+                  <span>Create Account</span>
+                  <FiArrowRight className="text-sm" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 pt-5 border-t border-[#E5E9F0] text-center text-xs text-[#697586]">
+            <span>Already have an account? </span>
+            <Link to="/" className="font-semibold text-[#2563EB] hover:text-[#1D4ED8]">
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

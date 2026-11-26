@@ -7,15 +7,14 @@ const videoSchema = new mongoose.Schema({
         required: true
     },
 
-    camera_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Camera",
-        required: true
-    },
-
     uploaded_by: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        required: true
+    },
+
+    filename: {
+        type: String,
         required: true
     },
 
@@ -24,10 +23,32 @@ const videoSchema = new mongoose.Schema({
         required: true
     },
 
+    selected_activities: {
+        type: [String],
+        default: []
+    },
+
+    zone_coordinates: {
+        type: Array,
+        default: null
+    },
+
     processing_status: {
         type: String,
         enum: ["pending", "processing", "processed", "failed"],
         default: "pending"
+    },
+
+    events: [{
+        event_type: String,
+        person_id: Number,
+        timestamp_seconds: Number,
+        risk_level: String,
+        confidence: Number
+    }],
+
+    annotated_video_url: {
+        type: String
     },
 
     upload_time: {

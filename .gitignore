@@ -1,0 +1,66 @@
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Node.js
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vite/
+
+# Keep package-lock.json for reproducible deployments
+
+# =========================
+# Python
+# =========================
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# =========================
+# Build outputs
+# =========================
+dist/
+build/
+.next/
+
+# =========================
+# Uploaded / temporary files
+# =========================
+uploads/
+temp_uploads/
+temp_videos/
+tmp/
+temp/
+outputs/
+
+# =========================
+# Generated model training files
+# =========================
+runs/
+
+# =========================
+# IDE and OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log

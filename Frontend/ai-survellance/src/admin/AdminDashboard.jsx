@@ -1,22 +1,51 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {FaBars,FaHome,FaUpload,FaUsers,FaUserCircle,FaSignOutAlt} from "react-icons/fa";
+import { FaBars, FaHome, FaUpload, FaUsers, FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 
-import {PieChart,Pie,Cell,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,Legend} from "recharts";
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { getDashboardStats } from "../services/api";
+
 const AdminDashboard = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const donutData = [
-    { name: "Loitering", value: 8 },
-    { name: "Restricted Area", value: 5 },
-    { name: "Sudden Run", value: 3 }
-  ];
-  const lineData = [
-    { activity: "Loitering", count: 8 },
-    { activity: "Restricted Area", count: 5 },
-    { activity: "Sudden Run", count: 3 }
-  ];
+
+  const [stats, setStats] = useState({
+    totalVideos: 0,
+    suspiciousActivities: 0,
+    totalUsers: 0,
+    eventsByType: []
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await getDashboardStats();
+      setStats(res.data);
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/");
+  };
+
+  const donutData = stats.eventsByType.length > 0
+    ? stats.eventsByType
+    : [
+      { name: "Loitering", value: 0 },
+      { name: "Restricted Area", value: 0 },
+      { name: "Sudden Run", value: 0 }
+    ];
+
+  const lineData = donutData.map(d => ({ activity: d.name, count: d.value }));
   const COLORS = ["#f59e0b", "#ef4444", "#3b82f6"];
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <div className={`fixed top-0 left-0 h-full w-64 bg-white shadow-xl transform ${open ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 flex flex-col`}>
@@ -51,13 +80,12 @@ const AdminDashboard = () => {
           </Link>
         </nav>
         <div className="p-4 border-t">
-          <Link
-            to="/"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 text-red-500"
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 text-red-500 w-full"
           >
             <FaSignOutAlt /> Logout
-          </Link>
+          </button>
         </div>
       </div>
       <div className="flex-1">
@@ -74,10 +102,10 @@ const AdminDashboard = () => {
             </h1>
           </div>
           <div className="flex items-center gap-6">
-            <button 
+            <button
               onClick={() => navigate("/admin/profile")}
               className="w-10 h-10 rounded-full bg-blue-300 text-white flex items-center justify-center">
-              <FaUserCircle/>
+              <FaUserCircle />
             </button>
           </div>
         </div>
@@ -85,15 +113,15 @@ const AdminDashboard = () => {
           <div className="grid md:grid-cols-3 gap-6 mb-10">
             <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-gray-500">Total Videos</h3>
-              <p className="text-3xl font-bold">24</p>
+              <p className="text-3xl font-bold">{stats.totalVideos}</p>
             </div>
             <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-gray-500">Suspicious Activity</h3>
-              <p className="text-3xl font-bold text-red-500">16</p>
+              <p className="text-3xl font-bold text-red-500">{stats.suspiciousActivities}</p>
             </div>
             <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-gray-500">Users</h3>
-              <p className="text-3xl font-bold">12</p>
+              <p className="text-3xl font-bold">{stats.totalUsers}</p>
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-8">

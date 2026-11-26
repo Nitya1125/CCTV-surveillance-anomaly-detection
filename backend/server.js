@@ -1,3 +1,11 @@
+// ================= PLATFORM-SPECIFIC DNS WORKAROUND =================
+// Only apply Google DNS servers on Windows to resolve Node.js v24 SRV lookup issues.
+// Do NOT run on Render/Linux.
+if (process.platform === "win32") {
+    const dns = require("node:dns");
+    dns.setServers(["8.8.8.8", "8.8.4.4"]);
+}
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -6,30 +14,58 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/CVMU_final";
+const MONGODB_URI = process.env.MONGODB_URI;
+
+// Validate that MONGODB_URI is provided before proceeding
+if (!MONGODB_URI) {
+    console.error("❌ FATAL: MONGODB_URI environment variable is not defined. Please set it in your environment or .env file.");
+    process.exit(1);
+}
 
 // ================= CORS CONFIGURATION =================
+// Support local development origins and configured production frontend URL
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175"
+];
+
+// If a production FRONTEND_URL is set (e.g. on Netlify), register it
+if (process.env.FRONTEND_URL) {
+    // Strip any trailing slash for consistent matching
+    const normalizedFrontend = process.env.FRONTEND_URL.replace(/\/+$/, "");
+    if (!allowedOrigins.includes(normalizedFrontend)) {
+        allowedOrigins.push(normalizedFrontend);
+    }
+}
+
 const corsOptions = {
     origin: function (origin, callback) {
-        // Allow requests with no origin (e.g. curl, server-to-server, postman)
-        if (!origin) return callback(null, true);
-        const allowedOrigins = [
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:5175",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:5174",
-            "http://127.0.0.1:5175",
-        ];
-        if (allowedOrigins.includes(origin)) {
+        // Allow requests with no origin (such as mobile apps, curl, server-to-server, Postman)
+        if (!origin) {
             return callback(null, true);
         }
-        return callback(null, true); // Dev-friendly fallback
+
+        const normalizedOrigin = origin.replace(/\/+$/, "");
+        if (allowedOrigins.includes(normalizedOrigin)) {
+            return callback(null, true);
+        }
+
+        // In development mode only, permit fallback while logging warning
+        if (process.env.NODE_ENV !== "production") {
+            return callback(null, true);
+        }
+
+        // In production, strictly reject unauthorized browser origins
+        return callback(new Error(`CORS blocked: Origin ${origin} is not allowed.`));
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     credentials: true,
-    optionsSuccessStatus: 200,
+    optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
@@ -45,7 +81,13 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 mongoose
     .connect(MONGODB_URI)
     .then(() => {
-        console.log("📦 MongoDB connected successfully to", MONGODB_URI);
+        // Never log credentials or full URI; mask host safely
+        try {
+            const urlObj = new URL(MONGODB_URI);
+            console.log(`📦 MongoDB connected successfully to [${urlObj.protocol}//${urlObj.host}${urlObj.pathname}]`);
+        } catch {
+            console.log("📦 MongoDB connected successfully");
+        }
     })
     .catch((err) => {
         console.error("❌ MongoDB connection error:", err.message);
@@ -79,15 +121,22 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-    res.json({
-        status: "healthy",
-        database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    const isDbConnected = mongoose.connection.readyState === 1;
+    res.status(isDbConnected ? 200 : 503).json({
+        status: isDbConnected ? "healthy" : "unhealthy",
+        database: isDbConnected ? "connected" : "disconnected",
         uptime: process.uptime()
     });
 });
 
 // ================= GLOBAL ERROR HANDLER =================
 app.use((err, req, res, next) => {
+    if (err.message && err.message.startsWith("CORS blocked")) {
+        return res.status(403).json({
+            message: err.message
+        });
+    }
+
     console.error("Server exception:", err);
     res.status(err.status || 500).json({
         message: err.message || "Internal server error occurred",
@@ -96,6 +145,7 @@ app.use((err, req, res, next) => {
 });
 
 // ================= START SERVER =================
-app.listen(PORT, () => {
-    console.log(`🚀 Surveillance Backend Service operational on port ${PORT}`);
+// Bind to 0.0.0.0 to properly accept external traffic on Render
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Surveillance Backend Service operational on port ${PORT} (0.0.0.0)`);
 });
